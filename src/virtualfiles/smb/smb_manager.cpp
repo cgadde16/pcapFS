@@ -570,15 +570,10 @@ void pcapfs::smb::SmbManager::updateSmbFiles(const std::string &fileId, const Fi
 void pcapfs::smb::SmbManager::adjustServerFilesForDirLayout(std::vector<FilePtr> &indexFiles, TimePoint &snapshot, uint8_t timestampMode) {
     std::vector<pcapfs::FilePtr> filesToAdd;
 
-    // TODO: this check needs to be globalized because it should also be done for FTP files
-    if (options::SNAPSHOT_SPECIFIED && timestampMode == pcapfs::options::TimestampMode::NETWORK &&
-        (snapshot < oldestNetworkTimestamp || snapshot > newestNetworkTimestamp)) {
-        // check if specified snapshot time is in allowed range
-        LOG_ERROR << "SMB: Specified snapshot time is not within the capture time interval";
-        LOG_ERROR << "Falling back to default mode ...";
-        options::SNAPSHOT_SPECIFIED = false;
-        snapshot = TimePoint::min();
-    }
+    // the check of the snapshot time against the capture time interval is done once for all server file
+    // protocols in DirectoryLayout::fillDirTreeSortby
+    (void) snapshot;
+    (void) timestampMode;
 
     LOG_DEBUG << "preparing smb files for dir layout";
     // Build a "keep" vector in one pass to avoid O(n^2) behavior of repeated mid-vector erases.

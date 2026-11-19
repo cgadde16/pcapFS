@@ -33,3 +33,5 @@ echo -e "\033[1;33mTesting pcap file...\033[0m"
 python3 -m pytest "${here}/pcapfs-system-tests.py" -vv --testpcap system-tests.pcap
 echo -e "\n\n\033[1;33mTesting pcapng file...\033[0m"
 python3 -m pytest "${here}/pcapfs-system-tests.py" -vv --testpcap system-tests.pcapng
+echo -e "\n\n\033[1;33mTesting NFS pcap file...\033[0m"
+python3 -m pytest "${here}/pcapfs-nfs-system-tests.py" -vv --testpcap nfs-system-tests.pcap

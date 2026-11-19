@@ -1,6 +1,7 @@
 #ifndef PCAPFS_SMB_MANAGER_H
 #define PCAPFS_SMB_MANAGER_H
 
+#include <algorithm>
 #include "../serverfile_manager.h"
 #include "smb_messages.h"
 #include "../smb.h"
@@ -29,6 +30,11 @@ namespace pcapfs {
             void setTimeOfNegResponse(const TimePoint &fsTime, const TimePoint &networkTime);
             SmbFileHandles const getFileHandles(const SmbContextPtr &smbContext);
             void adjustServerFilesForDirLayout(std::vector<FilePtr> &indexFiles, TimePoint &snapshot, uint8_t timestampMode) override;
+            // widens [oldest, newest] to include the network time range of the SMB traffic (no change without traffic)
+            void extendNetworkTimeRange(TimePoint &oldest, TimePoint &newest) const {
+                oldest = std::min(oldest, oldestNetworkTimestamp);
+                newest = std::max(newest, newestNetworkTimestamp);
+            }
 
             // SMB2_QUERY_INFO Response
             void updateSmbFiles(const std::shared_ptr<QueryInfoResponse> &queryInfoResponse, const SmbContextPtr &smbContext, uint64_t messageId);

@@ -15,6 +15,7 @@
 #include "virtualfiles/udp.h"
 #include "virtualfiles/smb/smb_manager.h"
 #include "virtualfiles/ftp/ftp_manager.h"
+#include "virtualfiles/nfs/nfs_manager.h"
 
 namespace fs = boost::filesystem;
 
@@ -147,6 +148,7 @@ int main(int argc, const char *argv[]) {
 
             // extract mappings for files and trees of possible SMB connections
             pcapfs::smb::SmbManager::getInstance().extractMappings(tcpFiles, index, config.checkNonDefaultPorts);
+            pcapfs::nfs::NfsManager::getInstance().extractMappings(tcpFiles, index, config.checkNonDefaultPorts);
         } catch (const std::runtime_error &err) {
             std::cerr << "Error: " << err.what() << std::endl;
             return 2;
@@ -188,6 +190,7 @@ int main(int argc, const char *argv[]) {
         LOG_TRACE << "inserting all smb server files into index";
         index.insert(pcapfs::smb::SmbManager::getInstance().getServerFiles(index));
         index.insert(pcapfs::ftp::FtpManager::getInstance().getServerFiles(index));
+        index.insert(pcapfs::nfs::NfsManager::getInstance().getServerFiles(index));
 
         if (!config.indexInMemory) {
             index.write(config.indexFilePath);

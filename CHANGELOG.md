@@ -12,6 +12,7 @@
 - Several smaller bugfixes and out-of-bounds read hardening
 
 ### Added
+- NFSv4 (minor versions 0-2 over TCP) as supported protocol including reconstruction of the server-side directory hierarchy
 - SMB2: option `--snapshot`
 - SMB2, FTP: option `--timestamp-mode`
 - FTP: more considered commands for server directory reconstruction

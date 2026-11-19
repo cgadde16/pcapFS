@@ -6,7 +6,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 set(PCAPFS_INDEX_VERSION_MAJOR 0)
-set(PCAPFS_INDEX_VERSION_MINOR 6)
+set(PCAPFS_INDEX_VERSION_MINOR 7)
 
 include(FetchContent)
 include(GNUInstallDirs)
@@ -116,6 +116,22 @@ set(PCAPFS_COMMON_SOURCES
         src/virtualfiles/smb/smb_constants.h
         src/virtualfiles/smb/smb_utils.cpp
         src/virtualfiles/smb/smb_manager.cpp
+        src/virtualfiles/nfs/xdr.h
+        src/virtualfiles/nfs/xdr.cpp
+        src/virtualfiles/nfs/rpc.h
+        src/virtualfiles/nfs/rpc.cpp
+        src/virtualfiles/nfs/nfs4_attrs.h
+        src/virtualfiles/nfs/nfs4_attrs.cpp
+        src/virtualfiles/nfs/nfs4_ops.h
+        src/virtualfiles/nfs/nfs4_ops.cpp
+        src/virtualfiles/nfs/nfs_stream.h
+        src/virtualfiles/nfs/nfs_stream.cpp
+        src/virtualfiles/nfs/nfs_manager.h
+        src/virtualfiles/nfs/nfs_manager.cpp
+        src/virtualfiles/nfs.h
+        src/virtualfiles/nfs.cpp
+        src/virtualfiles/nfscontrol.h
+        src/virtualfiles/nfscontrol.cpp
         src/virtualfiles/serverfile.cpp
         src/virtualfiles/smb.cpp
         src/virtualfiles/serverfile_manager.cpp

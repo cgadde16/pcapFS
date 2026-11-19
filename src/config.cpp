@@ -109,7 +109,7 @@ namespace {
     void parseDecodeSection(const toml::table *section, ConfigFileOptions &config, const pcapfs::Path &configPath) {
         if (!section) { return; }
 
-        const std::set<std::string> validDecodeTypes = {"xor", "tls", "cobaltstrike"};
+        const std::set<std::string> validDecodeTypes = {"xor", "tls", "cobaltstrike", "nfs"};
 
         for (auto &[name, node] : *section) {
             if (std::find(validDecodeTypes.begin(), validDecodeTypes.end(), std::string(name)) == validDecodeTypes.end()) {
@@ -203,13 +203,13 @@ namespace {
                     ("show-all", "also show file which have been parsed already")
                     ("show-metadata", "show meta data files (e.g. HTTP headers)")
                     ("snapshot", po::value<std::string>(),
-                    "point in time where to reconstruct SMB share (unix timestamp or time string yyyy-MM-ddTHH:mm:ssZ in UTC)")
+                    "point in time where to reconstruct SMB share or NFS export (unix timestamp or time string yyyy-MM-ddTHH:mm:ssZ in UTC)")
                     ("snip", po::value<std::string>()->value_name("<startTime>,<endTime>"),
                     "only display virtual files from the specified network time interval (unix timestamps or time string yyyy-MM-ddTHH:mm:ssZ in UTC)")
                     ("sortby", po::value<std::string>(&(opts.config.sortby))->default_value("/protocol/"),
                      "virtual directory hierarchy to create when mounting the PCAP(s)")
                     ("timestamp-mode", po::value<std::string>()->default_value("hybrid"),
-                    "timestamps to set for SMB files (hybrid/fs/network)")
+                    "timestamps to set for SMB, NFS and FTP files (hybrid/fs/network)")
                     ("version,V", "show version information and exit");
 
 

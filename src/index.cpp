@@ -20,6 +20,7 @@
 #include "versions.h"
 #include "virtualfiles/serverfile.h"
 #include "virtualfiles/smb/smb_manager.h"
+#include "virtualfiles/nfs/nfs_manager.h"
 
 
 namespace {
@@ -156,6 +157,7 @@ void pcapfs::Index::write(const pcapfs::Path &path) const {
     archive << header;
 
     smb::SmbManager::getInstance().serialize(archive, 0);
+    nfs::NfsManager::getInstance().serialize(archive, 0);
 
     const uint64_t numberOfFiles = files.size();
     archive << numberOfFiles;
@@ -193,6 +195,8 @@ void pcapfs::Index::read(const pcapfs::Path &path) {
         assertIndexHeaderIsCompatible(header);
 
         smb::SmbManager::getInstance().deserialize(archive, 0);
+        if (header.version.first > 0 || header.version.second >= 7)
+            nfs::NfsManager::getInstance().deserialize(archive, 0);
 
         uint64_t numberOfFiles;
         archive >> numberOfFiles;

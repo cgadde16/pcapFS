@@ -10,7 +10,7 @@ features that make it different from these tools—most notably:
 - almost arbitrary sortable virtual directory hierarchy
 - on the fly decoding and decrypting
 - direct extraction of files transferred over the network
-- reconstruction of server-side file systems for protocols like SMB2 and FTP including different file versions (see [below](#reconstruction-of-the-server-side-directory-hierarchy-for-ftp-and-smb2))
+- reconstruction of server-side file systems for protocols like SMB2, NFSv4 and FTP including different file versions (see [below](#reconstruction-of-the-server-side-directory-hierarchy-for-ftp-smb2-and-nfsv4))
 
 Instead of extracting the payload (i.e. copying the data to disk), pcapFS provides direct access into the PCAP/PCAPNG files.
 To speed the access up, an index is created when a PCAP is mounted for the first time. This takes almost the same time
@@ -25,6 +25,7 @@ In pcapFS each protocol and decoder is implemented as a *virtual file*. These vi
 - TLS 1.0-1.2 (see [below](#decrypting-and-decoding-traffic))
 - FTP
 - SMB2
+- NFSv4 (see [below](#reconstruction-of-the-server-side-directory-hierarchy-for-ftp-smb2-and-nfsv4))
 - SSH
 - DNS
 - DHCP
@@ -270,6 +271,7 @@ When you pass the option `--show-metadata` to pcapFS, additional files with usef
 - TLS: all certificates of the server-side certificate chain
 - HTTP: headers from requests and responses
 - SMB2: control files containing transferred commands and responses per connection as well as empty files from the reconstructed server-side directory hierarchy
+- NFSv4: control files containing transferred calls and replies per connection as well as empty files from the reconstructed server-side directory hierarchy
 - FTP: control files and credential files containing the client's login credentials
 
 ## Decrypting and Decoding Traffic
@@ -310,18 +312,20 @@ The team server's private RSA key may be known when a cracked Cobalt Strike vers
 
 With the command line option `--no-cs` set, pcapFS does not try to decrypt Cobalt Strike traffic which may improve the overall performance.
 
-## Reconstruction of the Server-Side Directory Hierarchy for FTP and SMB2
-When analyzing a capture file that contains FTP or SMB2 traffic, pcapFS attempts to reconstruct the directory hierarchy of the corresponding FTP or SMB2 server including all files as far as possible. For this, pcapFS follows per connection the current working directory and parses all messages which indicate which files are located there.
+## Reconstruction of the Server-Side Directory Hierarchy for FTP, SMB2 and NFSv4
+When analyzing a capture file that contains FTP, SMB2 or NFSv4 traffic, pcapFS attempts to reconstruct the directory hierarchy of the corresponding FTP, SMB2 or NFSv4 server including all files as far as possible. For this, pcapFS follows per connection the current working directory and parses all messages which indicate which files are located there.
 
 For FTP traffic, the reconstructed directory hierarchy only includes downloaded files and empty files whose metadata is extracted via `MLSD` and `MLST` commands.
 
 For SMB2 traffic, more information can be extracted, enabling a more detailed directory reconstruction. Files accessed directly via SMB2 Read/Write messages are populated with the corresponding file content that is read or written. Additionally, during the handling of SMB2 Read/Write messages, different file versions are created (indicated by the file name tag `@<file version number>`) each time the content changes. All other files, which are known to exist only from context, are created as empty files with the extracted metadata set. To also display these empty files, the `--show-metadata` option must be enabled. More infos on how pcapFS reconstructs SMB shares can be found in our paper [Mount SMB.pcap: Reconstructing file systems and file operations from network traffic](https://www.sciencedirect.com/science/article/pii/S2666281724001318) and in the [wiki page](https://github.com/fkie-cad/pcapFS/wiki/SMB-Documentation)
 
-### Timestamp Modes for SMB2 files
-Usually, the virtual files created by pcapFS are equipped with network timestamps, which were stored in the capture file for each packet. However, when reconstructing SMB shares, pcapFS uses the actual timestamps from the SMB shares themselves. These filesystem timestamps are communicated via the SMB2 packets in the capture file and differ from the network timestamps. But, since the communicated filesystem timestamps are not always reliable and cannot be determined in all scenarios, pcapFS follows a hybrid approach by default. This means pcapFS uses the communicated filesystem timestamps but updates them manually when a read/write operation is parsed. This approach also accounts for possible time skews between network and filesystem time that may occur when there is a time discrepancy between the recording device and the SMB share. If you prefer the SMB files to use network or unmodified filesystem timestamps, you can set the option `--timestamp-mode` and pass `network` or `fs` accordingly.
+For NFSv4 traffic (minor versions 0, 1 and 2), one directory tree is reconstructed per server IP. As for SMB2, files that are read or written are populated with the transferred content, a new file version (`@<file version number>`) is created each time the content changes, and files which are known to exist only from context (including symbolic links) are created as empty files that are displayed with `--show-metadata`. Removed files are kept. Files and directories whose path up to the root of the server is not part of the capture are placed in directories named `unknown-<hash>`. NFSv4 traffic encrypted with Kerberos (`sec=krb5p`) cannot be parsed. NFSv4 servers are expected on TCP port 2049; for other ports, set `--check-non-default-ports` or add an `nfs` rule to the `[decode]` section of the [configuration file](#configuration-file).
 
-### Option `--snapshot` for SMB2 files
-Apart from seeing all versions of reconstructed files from an SMB share captured over time, it is also possible to display the SMB share state at a specific point in time. To do this, use the `--snapshot` option and provide the desired point in time (unix timestamp or format `yyyy-MM-ddTHH:mm:ssZ` in UTC). By default, you need to specify the timestamp based on the filesystem timestamps from the SMB share, not the network timestamps from the capture file. If the option `--timestamp-mode` is set to `network`, then the SMB files are equipped with the network timestamps instead and the time specified via `--snapshot` will be treated as a network timestamp. Note that, when `--timestamp-mode=network` is set, the specified snapshot time must be within the time interval in which the SMB traffic was recorded.
+### Timestamp Modes for SMB2 and NFSv4 files
+Usually, the virtual files created by pcapFS are equipped with network timestamps, which were stored in the capture file for each packet. However, when reconstructing SMB shares, pcapFS uses the actual timestamps from the SMB shares themselves. These filesystem timestamps are communicated via the SMB2 packets in the capture file and differ from the network timestamps. But, since the communicated filesystem timestamps are not always reliable and cannot be determined in all scenarios, pcapFS follows a hybrid approach by default. This means pcapFS uses the communicated filesystem timestamps but updates them manually when a read/write operation is parsed. This approach also accounts for possible time skews between network and filesystem time that may occur when there is a time discrepancy between the recording device and the SMB share. If you prefer the SMB files to use network or unmodified filesystem timestamps, you can set the option `--timestamp-mode` and pass `network` or `fs` accordingly. The same applies to NFSv4 files, whose filesystem timestamps are taken from the file attributes returned by the server.
+
+### Option `--snapshot` for SMB2 and NFSv4 files
+Apart from seeing all versions of reconstructed files from an SMB share captured over time, it is also possible to display the SMB share state at a specific point in time. To do this, use the `--snapshot` option and provide the desired point in time (unix timestamp or format `yyyy-MM-ddTHH:mm:ssZ` in UTC). By default, you need to specify the timestamp based on the filesystem timestamps from the SMB share, not the network timestamps from the capture file. If the option `--timestamp-mode` is set to `network`, then the SMB files are equipped with the network timestamps instead and the time specified via `--snapshot` will be treated as a network timestamp. Note that, when `--timestamp-mode=network` is set, the specified snapshot time must be within the time interval in which the SMB and NFSv4 traffic was recorded. The option works in the same way for NFSv4 files.
 
 ## Option `--snip`
 To consider only a specific portion of the provided capture file(s) and ignore all other recorded traffic, the `--snip` option can be used. With `--snip`, two comma-separated time strings (unix time stamps or time format `yyyy-MM-ddTHH:mm:ssZ` in UTC) need to be specified that define the time interval of the traffic to be included (`--snip <startTime>,<endTime>`). For example, to consider all traffic from timestamp 1730289978 onwards, use `--snip 1730289978,`.
@@ -363,6 +367,10 @@ looks like this:
   srcIP = "8.7.6.5"
   dstPort = 8080
 
+[[decode.nfs.properties]]
+  dstIP = "10.0.0.1"
+  dstPort = 20490
+
 ```
 The `[general]` section allows setting the `sortby` option described above.
 
@@ -370,8 +378,8 @@ The `[keys]` section allows you to define a list of paths to key files. Note tha
 relative to the config file. Just as with the `-k` command line option, you are free to use files or directories here.
 
 The `[decode]` section can be used to provide custom protocol parsing and decoding rules. That is, you can tell pcapFS
-which parser to use for connections meeting given criteria. The example config above defines four rules, two for XOR
-decoding, one for TLS and one for Cobalt Strike. As the `properties` key implies, you can use pcapFS properties to define your decoding rules.
+which parser to use for connections meeting given criteria. The example config above defines five rules, two for XOR
+decoding, one for TLS, one for Cobalt Strike and one for an NFSv4 server on a non-default port. As the `properties` key implies, you can use pcapFS properties to define your decoding rules.
 In case of the TLS example above, all connections from source IP 1.2.3.4 and source port 8080 would be parsed with the
 TLS protocol parser. For XOR we defined two rules both stating that connection meeting the criteria should be parsed
 with the XOR parser: all connections from source IP 1.2.3.4 to destination IP 4.3.2.1 and

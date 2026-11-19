@@ -9,6 +9,7 @@
 #include "properties.h"
 #include "virtualfiles/smb/smb_manager.h"
 #include "virtualfiles/ftp/ftp_manager.h"
+#include "virtualfiles/nfs/nfs_manager.h"
 
 
 namespace pcapfs_filesystem {
@@ -111,7 +112,7 @@ namespace pcapfs_filesystem {
 
         // update timestamps for serverfile dirs
         // when the snapshot option is set, this artificial timestamp settings for the parent dirs is not done
-        if (snapshotAndFsTimestamps && serverFilePtr->isFiletype("smb"))
+        if (snapshotAndFsTimestamps && (serverFilePtr->isFiletype("smb") || serverFilePtr->isFiletype("nfs")))
             return current;
 
         if (!parentDirs.empty()) {
@@ -167,8 +168,24 @@ namespace pcapfs_filesystem {
     int DirectoryLayout::fillDirTreeSortby(const pcapfs::Index &index, pcapfs::TimePoint &snapshot, uint8_t timestampMode) {
         initRoot();
         auto files = index.getFiles();
+        if (pcapfs::options::SNAPSHOT_SPECIFIED && timestampMode == pcapfs::options::TimestampMode::NETWORK) {
+            // The snapshot time has to lie within the time range of the server file traffic. The range is the
+            // union over all protocols: a protocol without traffic (or with a shorter range) must not turn the
+            // snapshot off for the others.
+            pcapfs::TimePoint oldest = pcapfs::TimePoint::max();
+            pcapfs::TimePoint newest = pcapfs::TimePoint{};
+            pcapfs::smb::SmbManager::getInstance().extendNetworkTimeRange(oldest, newest);
+            pcapfs::nfs::NfsManager::getInstance().extendNetworkTimeRange(oldest, newest);
+            if (snapshot < oldest || snapshot > newest) {
+                LOG_ERROR << "Specified snapshot time is not within the capture time interval";
+                LOG_ERROR << "Falling back to default mode ...";
+                pcapfs::options::SNAPSHOT_SPECIFIED = false;
+                snapshot = pcapfs::TimePoint::min();
+            }
+        }
         pcapfs::smb::SmbManager::getInstance().adjustServerFilesForDirLayout(files, snapshot, timestampMode);
         pcapfs::ftp::FtpManager::getInstance().adjustServerFilesForDirLayout(files, snapshot, timestampMode);
+        pcapfs::nfs::NfsManager::getInstance().adjustServerFilesForDirLayout(files, snapshot, timestampMode);
         bool snapshotAndFsTimestamps = (pcapfs::options::SNAPSHOT_SPECIFIED && timestampMode == pcapfs::options::TimestampMode::FS);
 
         bool earlyBreak = false;
