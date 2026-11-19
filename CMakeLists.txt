@@ -178,6 +178,12 @@ if (BUILD_TESTING)
             tests/unit/test-command-line-options.cpp
             tests/unit/test-utils.cpp
             tests/unit/test-index.cpp
+            tests/unit/test-nfs-xdr.cpp
+            tests/unit/test-nfs-rpc.cpp
+            tests/unit/test-nfs4.cpp
+            tests/unit/test-nfs-stream.cpp
+            tests/unit/test-nfs-file.cpp
+            tests/unit/test-nfs-manager.cpp
             )
     target_link_libraries(unittests PRIVATE pcapfs_obj Catch2::Catch2)
     target_include_directories(unittests PRIVATE
